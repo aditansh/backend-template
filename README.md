@@ -9,7 +9,7 @@
 * JWT 
 * Sequelize 
 
-> Users and Products Table Created Using Sequelize CLI 
+> Users and Posts Table Created Using Sequelize CLI 
 
 ## Available Routes for Users 
 
