@@ -1,7 +1,8 @@
 require("dotenv").config();
 const { Users, Posts } = require("../models");
 const multer = require("multer");
-const { s3Upload } = require("../utils/s3upload");
+const { s3upload } = require("../utils/s3upload");
+const { s3delete } = require("../utils/s3delete");
 
 exports.viewPosts = async (req, res) => {
   try {
@@ -32,8 +33,8 @@ exports.createPosts = async (req, res) => {
   multer({
     storage: multer.memoryStorage(),
   }).single("file")(req, res, async (err) => {
-    const { username, body } = req.body;
     try {
+      const { username, body } = req.body;
       const user = await Users.findOne({ where: { username } });
 
       if (!user) {
@@ -50,7 +51,7 @@ exports.createPosts = async (req, res) => {
         userID: user.userID,
       });
 
-      const data = await s3Upload(user.uuid, buffer, originalname);
+      const data = await s3upload(post.uuid, buffer, originalname);
       if (!data) {
         return res.status(401).json({
           status: false,
@@ -75,33 +76,50 @@ exports.createPosts = async (req, res) => {
 };
 
 exports.updatePost = async (req, res) => {
-  try {
-    const { postuuid, body } = req.body;
-    const fileLink = req.file.path;
+  multer({
+    storage: multer.memoryStorage(),
+  }).single("file")(req, res, async (err) => {
+    try {
+      const { postuuid, body } = req.body;
+      const post = await Posts.findOne({ where: { uuid: postuuid } });
+      if (!post) {
+        res.status(400).json({
+          status: false,
+          msg: "Post not found",
+        });
+      }
+      const { originalname, buffer } = req.file;
 
-    const post = await Posts.update(
-      { body, fileLink },
-      { where: { uuid: postuuid } }
-    );
+      const deleteFile = await s3delete(postuuid);
+      if (!deleteFile) {
+        return res.status(401).json({
+          status: false,
+          msg: "Old file not deleted",
+        });
+      }
 
-    if (!post)
-      return res.status(400).json({
+      const data = await s3upload(post.uuid, buffer, originalname);
+      if (!data) {
+        return res.status(401).json({
+          status: false,
+          msg: "New file not uploaded",
+        });
+      }
+
+      await post.update({ fileLink: data.Location });
+
+      return res.status(200).json({
         status: true,
-        msg: "Post not found",
+        msg: "Post updated",
       });
-
-    const rpost = await Posts.findOne({ where: { uuid: postuuid } });
-    console.log(rpost);
-    return res.status(200).json({
-      status: true,
-      rpost,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      status: false,
-      msg: err,
-    });
-  }
+    } catch (err) {
+      console.log(err);
+      return res.status(500).json({
+        status: false,
+        msg: "Server error",
+      });
+    }
+  });
 };
 
 exports.deletePost = async (req, res) => {
@@ -116,8 +134,14 @@ exports.deletePost = async (req, res) => {
         msg: "Post not found",
       });
     else {
-      const fileLink = post.fileLink;
-      
+      const deleteFile = await s3delete(postuuid);
+      if (!deleteFile) {
+        return res.status(401).json({
+          status: false,
+          msg: "File not deleted",
+        });
+      }
+
       const data = await Posts.destroy({ where: { uuid: postuuid } });
       if (data)
         return res.status(200).json({
@@ -133,7 +157,7 @@ exports.deletePost = async (req, res) => {
   } catch (err) {
     return res.status(500).json({
       status: false,
-      msg: err,
+      msg: "err",
     });
   }
 };

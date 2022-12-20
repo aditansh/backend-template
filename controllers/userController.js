@@ -32,7 +32,11 @@ exports.signup = async (req, res) => {
       password: encryptedPassword,
     };
 
-    const accessToken = jwt.sign({ username }, process.env.ACCESS_TOKEN_SECRET);
+    const accessToken = jwt.sign(
+      { username },
+      process.env.ACCESS_TOKEN_SECRET0,
+      { expiresIn: "15s" }
+    );
     const refreshToken = jwt.sign(
       { username },
       process.env.REFRESH_TOKEN_SECRET
