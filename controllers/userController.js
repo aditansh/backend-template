@@ -34,8 +34,8 @@ exports.signup = async (req, res) => {
 
     const accessToken = jwt.sign(
       { username },
-      process.env.ACCESS_TOKEN_SECRET0,
-      { expiresIn: "15s" }
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "1h" }
     );
     const refreshToken = jwt.sign(
       { username },
@@ -44,6 +44,8 @@ exports.signup = async (req, res) => {
     user.refreshToken = refreshToken;
 
     await Users.create(user);
+
+    user.password = undefined;
 
     return res.status(201).json({
       status: true,
@@ -78,7 +80,7 @@ exports.login = async (req, res) => {
         { username },
         process.env.ACCESS_TOKEN_SECRET,
         {
-          expiresIn: "15s",
+          expiresIn: "1h",
         }
       );
       const refreshToken = jwt.sign(
@@ -138,7 +140,7 @@ exports.refreshToken = async (req, res) => {
     const accessToken = jwt.sign(
       { username: user.username },
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "15s" }
+      { expiresIn: "1h" }
     );
 
     res.json({ accessToken });
@@ -153,7 +155,8 @@ exports.logout = async (req, res) => {
 
   const user = await Users.findOne({ where: { refreshToken: refreshToken } });
 
-  if (!user) return res.status(204);
+  if (!user)
+    return res.status(204).json({ status: false, msg: "User not found" });
 
   const userID = user.userID;
 

@@ -7,7 +7,7 @@ app.use(express.json())
 app.use('/',routes)
 
 app.get('/', (req, res) => {
-    res.send("jwt test")
+    res.send("server is running")
 })
 
 let port = process.env.PORT;

@@ -4,6 +4,8 @@ const multer = require("multer");
 const { s3upload } = require("../utils/s3upload");
 const { s3delete } = require("../utils/s3delete");
 
+var limits = { fileSize: 1024 * 1024 }; //1 MB
+
 exports.viewPosts = async (req, res) => {
   try {
     const { username } = req.body;
@@ -32,8 +34,16 @@ exports.viewPosts = async (req, res) => {
 exports.createPosts = async (req, res) => {
   multer({
     storage: multer.memoryStorage(),
+    limits: limits,
   }).single("file")(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({
+        status: false,
+        msg: "File size too large",
+      });
+    }
     try {
+      console.log(req.file);
       const { username, body } = req.body;
       const user = await Users.findOne({ where: { username } });
 
@@ -78,7 +88,14 @@ exports.createPosts = async (req, res) => {
 exports.updatePost = async (req, res) => {
   multer({
     storage: multer.memoryStorage(),
+    limits: limits,
   }).single("file")(req, res, async (err) => {
+    if(err){
+      return res.status(400).json({
+        status: false,
+        msg: "File size too large",
+      });
+    }
     try {
       const { postuuid, body } = req.body;
       const post = await Posts.findOne({ where: { uuid: postuuid } });
